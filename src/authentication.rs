@@ -1,3 +1,4 @@
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
 pub enum Method {
     NoAuthenticationRequired,
     UnknownMethod(u8),

@@ -15,6 +15,10 @@ pub struct NewUnauthenticatedClient {
 }
 
 impl NewUnauthenticatedClient {
+    pub fn max_expected_bytes() -> usize {
+        1+1+255
+    }
+
     /// Processes a packet from a new client.
     ///
     /// Two possible results:
@@ -22,7 +26,7 @@ impl NewUnauthenticatedClient {
     ///   It may be written on the console or in a log file.
     /// * If everything went well, `Ok(new_unauthenticated_client)` is returned
     ///   and should be used to accept or not the client.
-    pub fn new<F>(initial_packet: &[u8]) -> Result<NewUnauthenticatedClient, String> {
+    pub fn new(initial_packet: &[u8]) -> Result<NewUnauthenticatedClient, String> {
         let message = try!(messages::InitialMessage::decode(initial_packet));
         if message.version == PROTOCOL_VERSION {
             Ok(NewUnauthenticatedClient { methods: message.methods })
@@ -70,6 +74,10 @@ pub struct NewAuthenticatedClient {
 }
 
 impl NewAuthenticatedClient {
+    pub fn max_expected_bytes(&self) -> usize {
+        1+1+1+1+(1+256)+2
+    }
+
     /// Processes the first packet of a new and authenticated client, and
     /// returns an `EarlyClient`
     pub fn on_request(self, packet: &[u8]) -> Result<EarlyClient, RequestError> {
@@ -114,6 +122,19 @@ impl EarlyClient {
             bound_address: bound_address,
         };
         (client, reply.encode())
+    }
+
+    /// Refuse or notify error of the early client's request.
+    /// Returns a reply that should be sent to the client.
+    /// Panics if the `error` is `messages::ReplyType::Succeeded`.
+    pub fn reply_error(self, error: messages::ReplyType) -> Vec<u8> {
+        assert!(error != messages::ReplyType::Succeeded);
+        let reply = messages::Reply {
+            version: PROTOCOL_VERSION,
+            reply: error,
+            bound_address: self.dest_address, // TODO: use an other address?
+        };
+        reply.encode()
     }
 }
 

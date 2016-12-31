@@ -21,9 +21,9 @@ impl Address {
     pub fn decode(bytes: &[u8]) -> Result<Address, RequestError> {
         match bytes.get(0) {
             Some(&0x01) => { // IPv4
-                match (bytes.get(8), bytes.get(9)) {
+                match (bytes.get(5), bytes.get(6)) {
                     (Some(port1), Some(port2)) => {
-                        let addr = Ipv4Addr::new(bytes[4], bytes[5], bytes[6], bytes[7]);
+                        let addr = Ipv4Addr::new(bytes[1], bytes[2], bytes[3], bytes[4]);
                         let port = ((*port1 as u16) << 8) + (*port2 as u16);
                         Ok(Address::SocketAddr(SocketAddr::V4(SocketAddrV4::new(addr, port))))
                     },
@@ -48,14 +48,14 @@ impl Address {
                 }
             },
             Some(&0x03) => { // Domain
-                let length = match bytes.get(4) {
+                let length = match bytes.get(1) {
                     Some(length) => *length as usize,
                     None => return Err(RequestError::PacketTooShort),
                 };
-                match (bytes.get(length+5), bytes.get(length+6)) {
+                match (bytes.get(length+2), bytes.get(length+3)) {
                     (Some(port1), Some(port2)) => {
                         let port = ((*port1 as u16) << 8) + (*port2 as u16);
-                        let domain = bytes[5..length+5].to_vec();
+                        let domain = bytes[2..length+2].to_vec();
                         Ok(Address::DomainPort(domain, port))
                     },
                     _ => Err(RequestError::PacketTooShort),
@@ -72,16 +72,16 @@ impl Address {
                 let mut res = vec![0u8; 7];
                 res[0] = 0x01;
                 res[1..5].copy_from_slice(&saddr.ip().octets());
-                res[6] = (saddr.port() >> 8) as u8;
-                res[7] = (saddr.port() & 0xff) as u8;
+                res[5] = (saddr.port() >> 8) as u8;
+                res[6] = (saddr.port() & 0xff) as u8;
                 res
             }
             Address::SocketAddr(SocketAddr::V6(saddr)) => {
                 let mut res = vec![0u8; 19];
                 res[0] = 0x04;
                 res[1..17].copy_from_slice(&saddr.ip().octets());
-                res[18] = (saddr.port() >> 8) as u8;
-                res[19] = (saddr.port() & 0xff) as u8;
+                res[17] = (saddr.port() >> 8) as u8;
+                res[18] = (saddr.port() & 0xff) as u8;
                 res
             }
             Address::DomainPort(ref domain, port) => {

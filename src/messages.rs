@@ -18,7 +18,7 @@ impl InitialMessage {
                     Ok(InitialMessage { version: version, methods: methods })
                 }
                 else {
-                    Err("Packet length does not match nmethods.".to_owned())
+                    Err(format!("Packet length ({}) does not match nmethods+2 ({}). Received these bytes: {:?}", bytes.len(), nmethods+2, bytes))
                 }
             },
             _ => Err("Packet is too short (< 2 bytes)".to_owned()),
@@ -66,6 +66,7 @@ impl Request {
     }
 }
 
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
 pub enum ReplyType {
     Succeeded,
     GeneralFailure,
